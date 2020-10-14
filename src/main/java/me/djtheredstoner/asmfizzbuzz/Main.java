@@ -112,6 +112,7 @@ public class Main {
         mainMethod.localVariables.add(new LocalVariableNode("i", "I", "I", start, returnLabel, 0));
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        //write™
         fizzBuzzClass.accept(writer);
         byte[] bytes = writer.toByteArray();
 
