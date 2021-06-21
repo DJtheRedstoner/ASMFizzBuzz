@@ -1,5 +1,6 @@
 package me.djtheredstoner.asmfizzbuzz;
 
+import me.djtheredstoner.asmdsl.InsnListBuilder;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.*;
 
@@ -21,95 +22,78 @@ public class Main {
         fizzBuzzClass.superName = "java/lang/Object";
 
         MethodNode mainMethod = new MethodNode(ACC_PUBLIC | ACC_STATIC, "fizzBuzz", "()V", null, null);
-        InsnList list = new InsnList();
 
-        LabelNode start = new LabelNode();
-        list.add(start);
-        list.add(new InsnNode(ICONST_1));
-        list.add(new VarInsnNode(ISTORE, 0));
+        InsnListBuilder builder = new InsnListBuilder() {{
+            add(L("start"));
+            iconst_1();
+            istore(0);
 
-        LabelNode loopStart = new LabelNode();
+            //Loop Start
+            add(L("loopStart"));
+            iload(0);
+            bipush(100);
+            if_icmpgt(L("return"));
 
-        LabelNode returnLabel = new LabelNode();
+            //Check if divisible by 15
+            iload(0);
+            bipush(15);
+            irem();
+            ifeq(L("fizzAndBuzz"));
 
-        //Loop Start
-        list.add(loopStart);
-        list.add(new VarInsnNode(ILOAD, 0));
-        list.add(new IntInsnNode(BIPUSH, 100));
-        list.add(new JumpInsnNode(IF_ICMPGT, returnLabel));
+            //Check if divisible by 3
+            iload(0);
+            iconst_3();
+            irem();
+            ifeq(L("fizz"));
 
+            //Check if divisible by 5
+            iload(0);
+            iconst_5();
+            irem();
+            ifeq(L("buzz"));
 
-        //Check if divisible by 15
-        LabelNode fizzAndBuzz = new LabelNode();
+            //Otherwise Print number
+            iload(0);
+            _goto(L("printInt"));
 
-        list.add(new VarInsnNode(ILOAD, 0));
-        list.add(new IntInsnNode(BIPUSH, 15));
-        list.add(new InsnNode(IREM));
-        list.add(new JumpInsnNode(IFEQ, fizzAndBuzz));
+            add(L("fizzAndBuzz"));
+            ldc("FizzBuzz");
+            _goto(L("printString"));
 
+            add(L("fizz"));
+            ldc("Fizz");
+            _goto(L("printString"));
 
-        //Check if divisible by 3
-        LabelNode fizz = new LabelNode();
+            add(L("buzz"));
+            ldc("Buzz");
+            _goto(L("printString"));
 
-        list.add(new VarInsnNode(ILOAD, 0));
-        list.add(new InsnNode(ICONST_3));
-        list.add(new InsnNode(IREM));
-        list.add(new JumpInsnNode(IFEQ, fizz));
+            add(L("printString"));
+            getstatic("java/lang/System", "out", "Ljava/io/PrintStream;");
+            swap();
+            invokevirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
+            _goto(L("doneLoop"));
 
-        //Check if divisible by 5
-        LabelNode buzz = new LabelNode();
+            add(L("printInt"));
+            getstatic("java/lang/System", "out", "Ljava/io/PrintStream;");
+            swap();
+            invokevirtual("java/io/PrintStream", "println", "(I)V");
+            _goto(L("doneLoop"));
 
-        list.add(new VarInsnNode(ILOAD, 0));
-        list.add(new InsnNode(ICONST_5));
-        list.add(new InsnNode(IREM));
-        list.add(new JumpInsnNode(IFEQ, buzz));
+            add(L("doneLoop"));
+            iinc(0, 1);
+            _goto(L("loopStart"));
 
-        LabelNode printInt = new LabelNode();
+            add(L("return"));
+            _return();
+        }};
 
-        //Otherwise Print number
-        list.add(new VarInsnNode(ILOAD, 0));
-        list.add(new JumpInsnNode(GOTO, printInt));
-
-        LabelNode printString = new LabelNode();
-
-        list.add(fizzAndBuzz);
-        list.add(new LdcInsnNode("FizzBuzz"));
-        list.add(new JumpInsnNode(GOTO, printString));
-
-        list.add(fizz);
-        list.add(new LdcInsnNode("Fizz"));
-        list.add(new JumpInsnNode(GOTO, printString));
-
-        list.add(buzz);
-        list.add(new LdcInsnNode("Buzz"));
-        list.add(new JumpInsnNode(GOTO, printString));
-
-        LabelNode doneLoop = new LabelNode();
-
-        list.add(printString);
-        list.add(new FieldInsnNode(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"));
-        list.add(new InsnNode(SWAP));
-        list.add(new MethodInsnNode(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false));
-        list.add(new JumpInsnNode(GOTO, doneLoop));
-
-        list.add(printInt);
-        list.add(new FieldInsnNode(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"));
-        list.add(new InsnNode(SWAP));
-        list.add(new MethodInsnNode(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(I)V", false));
-        list.add(new JumpInsnNode(GOTO, doneLoop));
-
-        list.add(doneLoop);
-        list.add(new IincInsnNode(0, 1));
-        list.add(new JumpInsnNode(GOTO, loopStart));
-
-        list.add(returnLabel);
-        list.add(new InsnNode(RETURN));
-
-        mainMethod.instructions.insert(list);
+        mainMethod.instructions.insert(builder.l());
 
         fizzBuzzClass.methods.add(mainMethod);
 
-        mainMethod.localVariables.add(new LocalVariableNode("i", "I", "I", start, returnLabel, 0));
+        // TODO when there is public label api
+        //mainMethod.localVariables.add(new LocalVariableNode("i", "I", "I", builder., returnLabel, 0));
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         //write™
@@ -134,7 +118,7 @@ public class Main {
             }
         }
 
-        Class fizzBuzz = new ByteClassloader().loadClass("FizzBuzzClass", bytes);
+        Class<?> fizzBuzz = new ByteClassloader().loadClass("FizzBuzzClass", bytes);
 
         try {
             fizzBuzz.getDeclaredMethod("fizzBuzz").invoke(null);
